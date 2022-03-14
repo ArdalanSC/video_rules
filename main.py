@@ -2,6 +2,7 @@ from object_detection import Yolo
 from PIL import Image
 
 
+
 model = Yolo()
 
 img_1 = Image.open("/home/dell/IdeaProjects/video_rules/src/1.png")
