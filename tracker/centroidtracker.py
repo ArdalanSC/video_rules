@@ -4,7 +4,7 @@ import numpy as np
  
 
 class CentroidTracker:
-    def __init__(self, maxDisappeared=10):
+    def __init__(self, maxDisappeared=15):
         self.nextObjectID = 0
         self.objects = OrderedDict()
 
@@ -110,6 +110,8 @@ class TrackingObject:
     def get_direction(self, n):
         # Get direction (left/right) of object of the last n frames
 
+        threshold = 20
+
         length = len(self.centers)
 
         if length == 1:
@@ -121,9 +123,9 @@ class TrackingObject:
         first_center = self.centers[-n]
         last_center = self.centers[-1]
 
-        if (first_center[0] - last_center[0]) > 0:
+        if (first_center[0] - last_center[0]) > threshold:
             return "Left"
-        elif first_center[0] == last_center[0]:
-            return "Stationary"
-        else:
+        elif first_center[0] - last_center[0] < - threshold:
             return "Right"
+        else:
+            return "Stationary"
