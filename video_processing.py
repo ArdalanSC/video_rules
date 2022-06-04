@@ -1,50 +1,58 @@
 from object_detection import YoloModel
 from PIL import Image
-from tracker import CentroidTracker
+from tracker import CentroidTracker, ShotDetection
+from datetime import datetime
 import cv2
-
-model = YoloModel("yolov5l.yaml", "yolov5l.pt")
-tracker = CentroidTracker()
-
-filename = "/media/ardalan/8074437274436A4C/Work/video_rules/drive/Screen direction/Example 3/video.mp4"
-
-vid = cv2.VideoCapture(filename)
+import os 
 
 
-frame_width = int(vid.get(3))
-frame_height = int(vid.get(4))
-fps = vid.get(cv2.CAP_PROP_FPS)
+class VideoProcessor:
+    def __init__(self, file_path, save_dir="results"):
 
-out = cv2.VideoWriter('example_3.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
+        self.file_path = file_path
+        file_name = os.path.basename(file_path).split(".")[0]
+        now = datetime.now().strftime("%Y%m%d__ %H%M%S")
+        self.folder_name = os.path.join(save_dir, f"{now}_{file_name}")
+        os.makedirs(self.folder_name)
 
-  
-while True:
-      
-    ret, frame = vid.read()
+        self.vid_stream = cv2.VideoCapture(file_path)
+        self.frame_width = int(self.vid_stream.get(3))
+        self.frame_height = int(self.vid_stream.get(4))
+        self.fps = self.vid_stream.get(cv2.CAP_PROP_FPS)
 
-    if not ret:
-        break
+        self.model = YoloModel("yolov5l.yaml", "yolov5l.pt")
+        self.tracker = CentroidTracker()
+        self.shot_detector = ShotDetection(self.folder_name)
 
-    pil_img = Image.fromarray(frame.astype('uint8'), 'RGB')
+    def run(self):
+        shot_num = 0
+        shot_folder = os.path.join(self.folder_name, f"shot_{shot_num}")
+        os.makedirs(shot_folder)
 
-    result = model(pil_img)
+        while True:
+              
+            ret, frame = self.vid_stream.read()
 
-    objects = tracker.update(result)
+            if not ret:
+                break
 
-    for obj in objects.values():
-        direction = obj.get_direction(8)
-        text = f"ID-{obj.id} {direction}"
-        center = obj.center
-        cv2.putText(frame, text, (center[0] - 10, center[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.circle(frame, (center[0], center[1]), 4, (0, 255, 0), -1)
+            frame_num = int(self.vid_stream.get(cv2.CAP_PROP_POS_FRAMES))
 
-  
-    cv2.imshow('frame', frame)
-    out.write(frame)
+            if self.shot_detector(frame, frame_num, frame_num/self.fps):
+                self.tracker.reset()
+                shot_num += 1
+                shot_folder = os.path.join(self.folder_name, f"shot_{shot_num}")
+                os.makedirs(shot_folder)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+            pil_img = Image.fromarray(frame.astype('uint8'), 'RGB')
 
-out.release()
-vid.release()
-cv2.destroyAllWindows()
+            result = self.model(pil_img)
+
+            self.tracker.update(result, frame, frame_num, shot_folder)
+
+        self.vid_stream.release()
+        self.shot_detector.release()
+        self.tracker.release()
+
+
+VideoProcessor("video_1.mp4").run()

@@ -25,7 +25,6 @@ class YoloModel:
         self.DIR = os.path.dirname(os.path.abspath(__file__))
         self.model_config = os.path.join(self.DIR, model_config)
         self.path = os.path.join(self.DIR, weights)
-        print(self.path)
         self.device = device
         self.model = self._load_model(self.model_config, self.path, self.device)
         self.image_size = imgsz
