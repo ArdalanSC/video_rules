@@ -5,7 +5,7 @@ import os
 
 
 class ShotDetection:
-    def __init__(self, directory="", threshold=350):
+    def __init__(self, directory="", threshold=1000):
         self.threshold = threshold
         self._prev_hash = None
         self.history = []
@@ -13,7 +13,7 @@ class ShotDetection:
 
     def __call__(self, frame, frame_num, frame_sec):
         frame_hash = imagehash.average_hash(
-            Image.fromarray(frame[::-1]), hash_size=32)
+            Image.fromarray(frame[::-1]), hash_size=64)
         if self._prev_hash is None:
             self._prev_hash = frame_hash
             return False

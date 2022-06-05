@@ -65,12 +65,19 @@ class CentroidTracker:
             for (row, col) in zip(rows, cols):
                 if row in usedRows or col in usedCols:
                     continue
- 
+                
+
                 objectID = objectIDs[row]
+                c1 = self.objects[objectID].centers[-1]
+                c2 = inputCentroids[col]
+                if ((c1-c2)**2).sum()**0.5 > 400:
+                    continue
+
                 self.objects[objectID].add(inputCentroids[col], rects[col], classes[col], frame, frame_num)
  
                 usedRows.add(row)
                 usedCols.add(col)
+
             unusedRows = set(range(0, D.shape[0])).difference(usedRows)
             unusedCols = set(range(0, D.shape[1])).difference(usedCols)
             if D.shape[0] >= D.shape[1]:
@@ -123,7 +130,15 @@ class TrackingObject:
         self.num_disappeared += 1
 
     def deregister(self):
+        if len(self.centers) < 5:
+            return
+
         data = {"object_id": self.id,
+                "total_frames": len(self.centers),
+                "first_frame": min(self.frame_nums),
+                "last_frame": max(self.frame_nums),
+                "first_center": self.centers[0],
+                "last_center": self.centers[-1],
                 "frames" : []}
 
         object_path = os.path.join(self.directory, f"object_{self.id}")
@@ -153,7 +168,9 @@ class TrackingObject:
             data["frames"].append(d)
             file_name = os.path.join(object_path, f"O{self.id}_F{int(frame_num)}.jpg")
             cv2.imwrite(file_name, img)
-        jason_file_name = os.path.join(object_path, f"O{self.id}.json")
+            prev_center = center
+
+        jason_file_name = os.path.join(object_path, "info.json")
         with open(jason_file_name, "w+") as f:
             json.dump(data, f)
 
